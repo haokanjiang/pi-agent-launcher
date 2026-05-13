@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.piagent.launcher-jetbrains-plugin</id>
     <name>Pi Agent Launcher</name>
-    <vendor email="piagent@users.noreply.github.com" url="https://github.com/piagent-launcher">Pi Agent Team</vendor>
+    <vendor email="haokanjiang@users.noreply.github.com" url="https://github.com/haokanjiang/pi-agent-launcher">haokanjiang</vendor>
 
     <description><![CDATA[
     <h2>Pi Agent Launcher</h2>
