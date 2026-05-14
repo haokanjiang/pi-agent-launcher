@@ -24,15 +24,14 @@ class PiTerminalService(private val project: Project) {
 
     /**
      * Launch Pi as a new tab in the IDE's Terminal tool window.
+     * Only one Pi session at a time — if already running, focus it.
      */
     fun launch() {
         if (isInitialized && isTerminalAlive()) {
-            // Focus existing Pi tab
             focusTerminalWindow()
             return
         }
 
-        // Reset if previous session was closed
         if (isInitialized) {
             reset()
         }
@@ -52,7 +51,8 @@ class PiTerminalService(private val project: Project) {
      */
     private fun isTerminalAlive(): Boolean {
         val component = terminalComponent.get() ?: return false
-        return component.isShowing
+        // Check if component is still attached to a parent (tab exists even if not focused)
+        return component.parent != null
     }
 
     /**
@@ -109,6 +109,14 @@ class PiTerminalService(private val project: Project) {
     private fun focusTerminalWindow() {
         val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Terminal")
         toolWindow?.show {
+            // Find and select the Pi tab
+            val contentManager = toolWindow.contentManager
+            for (content in contentManager.contents) {
+                if (content.displayName == "Pi") {
+                    contentManager.setSelectedContent(content, true)
+                    break
+                }
+            }
             terminalComponent.get()?.requestFocusInWindow()
         }
     }
