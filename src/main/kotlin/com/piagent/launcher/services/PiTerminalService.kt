@@ -3,6 +3,7 @@ package com.piagent.launcher.services
 import com.piagent.launcher.settings.PiSettings
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
@@ -103,6 +104,9 @@ class PiTerminalService(private val project: Project) {
 
             // Show and focus the Terminal tool window
             focusTerminalWindow()
+
+            // Monitor terminal process for unexpected exit
+            monitorProcess(widget)
 
             logger.info("Pi terminal tab created in Terminal window")
         } catch (e: Exception) {
@@ -213,6 +217,58 @@ class PiTerminalService(private val project: Project) {
             .getNotificationGroup("Pi Agent")
             .createNotification(message, type)
             .notify(project)
+    }
+
+    /**
+     * Monitor the terminal process. If it exits unexpectedly, offer to restart.
+     */
+    private fun monitorProcess(widget: Any) {
+        val checkTimer = object : Timer(2000, null) {
+            init {
+                isRepeats = true
+                addActionListener {
+                    try {
+                        val connector = widget.javaClass.getMethod("getTtyConnector").invoke(widget)
+                        if (connector != null) {
+                            val isConnected = connector.javaClass.getMethod("isConnected").invoke(connector) as Boolean
+                            if (!isConnected && isInitialized) {
+                                stop()
+                                handleProcessExit()
+                            }
+                        }
+                    } catch (_: Exception) {
+                        // Widget disposed, stop monitoring
+                        stop()
+                    }
+                }
+            }
+        }
+        // Start monitoring after pi has had time to start
+        Timer(5000, null).apply {
+            isRepeats = false
+            addActionListener {
+                checkTimer.start()
+            }
+            start()
+        }
+    }
+
+    private fun handleProcessExit() {
+        reset()
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup("Pi Agent")
+            .createNotification(
+                "Pi process exited unexpectedly",
+                "Click to restart Pi",
+                NotificationType.WARNING
+            )
+        notification.addAction(object : com.intellij.notification.NotificationAction("Restart Pi") {
+            override fun actionPerformed(e: AnActionEvent, notification: com.intellij.notification.Notification) {
+                notification.expire()
+                launch()
+            }
+        })
+        notification.notify(project)
     }
 
     companion object {
