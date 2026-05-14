@@ -37,6 +37,30 @@ install: build ## Build and show install path
 run-ide: ## Launch a sandbox IDE with the plugin loaded
 	./gradlew runIde
 
+bump-patch: ## Bump patch version (0.1.3 → 0.1.4)
+	@CURRENT=$(VERSION); \
+	MAJOR=$$(echo $$CURRENT | cut -d. -f1); \
+	MINOR=$$(echo $$CURRENT | cut -d. -f2); \
+	PATCH=$$(echo $$CURRENT | cut -d. -f3); \
+	NEW="$$MAJOR.$$MINOR.$$((PATCH + 1))"; \
+	sed -i '' "s/version = \"$$CURRENT\"/version = \"$$NEW\"/" build.gradle.kts; \
+	echo "\033[32m✓ Bumped $$CURRENT → $$NEW\033[0m"
+
+bump-minor: ## Bump minor version (0.1.3 → 0.2.0)
+	@CURRENT=$(VERSION); \
+	MAJOR=$$(echo $$CURRENT | cut -d. -f1); \
+	MINOR=$$(echo $$CURRENT | cut -d. -f2); \
+	NEW="$$MAJOR.$$((MINOR + 1)).0"; \
+	sed -i '' "s/version = \"$$CURRENT\"/version = \"$$NEW\"/" build.gradle.kts; \
+	echo "\033[32m✓ Bumped $$CURRENT → $$NEW\033[0m"
+
+bump-major: ## Bump major version (0.1.3 → 1.0.0)
+	@CURRENT=$(VERSION); \
+	MAJOR=$$(echo $$CURRENT | cut -d. -f1); \
+	NEW="$$((MAJOR + 1)).0.0"; \
+	sed -i '' "s/version = \"$$CURRENT\"/version = \"$$NEW\"/" build.gradle.kts; \
+	echo "\033[32m✓ Bumped $$CURRENT → $$NEW\033[0m"
+
 release: build ## Create GitHub release with jar and zip
 	@if gh release view v$(VERSION) >/dev/null 2>&1; then \
 		echo "\033[33m⚠ v$(VERSION) already released. Bump version in build.gradle.kts first.\033[0m"; \
