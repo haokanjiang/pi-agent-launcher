@@ -66,6 +66,22 @@ release: build ## Create GitHub release and publish to JetBrains Marketplace
 		echo "\033[33m⚠ v$(VERSION) already released. Bump version in build.gradle.kts first.\033[0m"; \
 		exit 1; \
 	fi
+	@echo "Generating change notes..."
+	@PREV_TAG=$$(git describe --tags --abbrev=0 2>/dev/null || echo ""); \
+	if [ -z "$$PREV_TAG" ]; then \
+		NOTES=$$(git log --pretty=format:"<li>%s</li>" | head -20); \
+	else \
+		NOTES=$$(git log $$PREV_TAG..HEAD --pretty=format:"<li>%s</li>"); \
+	fi; \
+	sed -i '' '/<change-notes>/,/<\/change-notes>/c\
+    <change-notes><![CDATA[\
+    <h3>'$(VERSION)'</h3>\
+    <ul>\
+    '"$$NOTES"'\
+    </ul>\
+    ]]></change-notes>' src/main/resources/META-INF/plugin.xml
+	@echo "Rebuilding with updated change notes..."
+	./gradlew buildPlugin
 	@echo "Releasing v$(VERSION)..."
 	git tag -f v$(VERSION)
 	git push origin v$(VERSION) --force
