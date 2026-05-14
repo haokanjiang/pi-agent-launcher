@@ -1,6 +1,8 @@
 package com.piagent.launcher.services
 
 import com.piagent.launcher.settings.PiSettings
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
@@ -37,12 +39,15 @@ class PiTerminalService(private val project: Project) {
         }
 
         try {
+            showNotification("Starting Pi...", NotificationType.INFORMATION)
             val workingDir = project.basePath ?: System.getProperty("user.home")
             createTerminalTab(workingDir)
             isInitialized = true
+            PiStatusWidget.update(project)
             startPiWithDelay()
         } catch (e: Exception) {
             logger.error("Failed to launch Pi terminal", e)
+            showNotification("Failed to start Pi: ${e.message}", NotificationType.ERROR)
         }
     }
 
@@ -199,7 +204,15 @@ class PiTerminalService(private val project: Project) {
         terminalComponent.set(null)
         sendTextFn = null
         isInitialized = false
+        PiStatusWidget.update(project)
         logger.info("Pi terminal reset")
+    }
+
+    private fun showNotification(message: String, type: NotificationType) {
+        NotificationGroupManager.getInstance()
+            .getNotificationGroup("Pi Agent")
+            .createNotification(message, type)
+            .notify(project)
     }
 
     companion object {
