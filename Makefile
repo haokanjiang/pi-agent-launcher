@@ -36,3 +36,15 @@ install: build ## Build and show install path
 
 run-ide: ## Launch a sandbox IDE with the plugin loaded
 	./gradlew runIde
+
+release: build ## Create GitHub release with jar and zip
+	@echo "Releasing v$(VERSION)..."
+	git tag -f v$(VERSION)
+	git push origin v$(VERSION) --force
+	gh release create v$(VERSION) \
+		$(ZIP) \
+		$(JAR) \
+		--title "v$(VERSION)" \
+		--generate-notes
+	@echo ""
+	@echo "✓ Released: https://github.com/haokanjiang/pi-agent-launcher/releases/tag/v$(VERSION)"
