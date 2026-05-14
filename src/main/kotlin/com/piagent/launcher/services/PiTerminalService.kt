@@ -5,15 +5,14 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.wm.ToolWindow
-import com.intellij.ui.content.ContentFactory
+import com.intellij.openapi.wm.ToolWindowManager
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JComponent
 import javax.swing.Timer
 
 /**
  * Manages the Pi terminal session lifecycle.
- * Uses reflection to support both legacy and reworked terminal APIs.
+ * Creates a "Pi" tab inside the IDE's Terminal tool window.
  */
 @Service(Service.Level.PROJECT)
 class PiTerminalService(private val project: Project) {
@@ -24,125 +23,81 @@ class PiTerminalService(private val project: Project) {
     private var isInitialized = false
 
     /**
-     * Initialize the Pi terminal inside the given tool window.
+     * Launch Pi as a new tab in the IDE's Terminal tool window.
      */
-    fun initTerminal(toolWindow: ToolWindow) {
+    fun launch() {
         if (isInitialized) {
-            toolWindow.show()
+            // Focus existing Pi tab
+            focusTerminalWindow()
             return
         }
 
-        toolWindow.contentManager.removeAllContents(true)
-
         try {
             val workingDir = project.basePath ?: System.getProperty("user.home")
-
-            if (tryReworkedTerminal(toolWindow, workingDir)) {
-                logger.info("Pi terminal initialized with Reworked Terminal API")
-            } else {
-                initLegacyTerminal(toolWindow, workingDir)
-                logger.info("Pi terminal initialized with Legacy Terminal API")
-            }
-
+            createTerminalTab(workingDir)
             isInitialized = true
             startPiWithDelay()
         } catch (e: Exception) {
-            logger.error("Failed to initialize Pi terminal", e)
+            logger.error("Failed to launch Pi terminal", e)
         }
     }
 
     /**
-     * Try to use the Reworked Terminal API (2025.3+).
-     * Returns true if successful.
-     */
-    private fun tryReworkedTerminal(toolWindow: ToolWindow, workingDir: String): Boolean {
-        return try {
-            // Check if TerminalToolWindowTabsManager exists
-            val managerClass = Class.forName(
-                "com.intellij.terminal.frontend.toolwindow.TerminalToolWindowTabsManager"
-            )
-
-            val getInstanceMethod = managerClass.getMethod("getInstance", Project::class.java)
-            val manager = getInstanceMethod.invoke(null, project) ?: return false
-
-            // createTabBuilder()
-            val createTabBuilderMethod = managerClass.getMethod("createTabBuilder")
-            val tabBuilder = createTabBuilderMethod.invoke(manager) ?: return false
-
-            // Set working directory if method exists
-            try {
-                val setDirMethod = tabBuilder.javaClass.getMethod("setWorkingDirectory", String::class.java)
-                setDirMethod.invoke(tabBuilder, workingDir)
-            } catch (_: NoSuchMethodException) {}
-
-            // Build the tab - returns Content with TerminalView
-            val buildMethod = tabBuilder.javaClass.getMethod("build")
-            val content = buildMethod.invoke(tabBuilder)
-
-            // Get TerminalView from the content
-            val terminalViewClass = Class.forName(
-                "com.intellij.terminal.frontend.view.TerminalView"
-            )
-
-            // Store sendText function via reflection
-            val sendTextMethod = terminalViewClass.getMethod("sendText", String::class.java)
-            val createSendTextBuilderMethod = try {
-                terminalViewClass.getMethod("createSendTextBuilder")
-            } catch (_: NoSuchMethodException) { null }
-
-            // Get the TerminalView instance from content
-            // The tab is created in the Terminal tool window, we need to get its component
-            // This approach creates a tab in the IDE's Terminal window, not our custom one
-            // So we fall back to legacy for custom tool window embedding
-            return false
-        } catch (_: ClassNotFoundException) {
-            false
-        } catch (_: NoSuchMethodException) {
-            false
-        } catch (e: Exception) {
-            logger.debug("Reworked Terminal API not available: ${e.message}")
-            false
-        }
-    }
-
-    /**
-     * Legacy terminal initialization using LocalTerminalDirectRunner.
+     * Create a new tab named "Pi" in the Terminal tool window.
      */
     @Suppress("DEPRECATION")
-    private fun initLegacyTerminal(toolWindow: ToolWindow, workingDir: String) {
-        val runnerClass = Class.forName("org.jetbrains.plugins.terminal.LocalTerminalDirectRunner")
-        val createMethod = runnerClass.getMethod("createTerminalRunner", Project::class.java)
-        val runner = createMethod.invoke(null, project)
+    private fun createTerminalTab(workingDir: String) {
+        try {
+            // Use TerminalToolWindowManager to create a tab in the Terminal window
+            val managerClass = Class.forName("org.jetbrains.plugins.terminal.TerminalToolWindowManager")
+            val getInstanceMethod = managerClass.getMethod("getInstance", Project::class.java)
+            val manager = getInstanceMethod.invoke(null, project)
 
-        val createWidgetMethod = runner.javaClass.getMethod(
-            "createTerminalWidget",
-            com.intellij.openapi.Disposable::class.java,
-            String::class.java,
-            Boolean::class.javaPrimitiveType
-        )
-        val widget = createWidgetMethod.invoke(runner, toolWindow.disposable, workingDir, true)
+            // createLocalShellWidget(workingDir, tabName) -> ShellTerminalWidget
+            val createMethod = managerClass.getMethod(
+                "createLocalShellWidget",
+                String::class.java,
+                String::class.java
+            )
+            val widget = createMethod.invoke(manager, workingDir, "Pi")
 
-        // Get component
-        val component = widget.javaClass.getMethod("getComponent").invoke(widget) as JComponent
-        terminalComponent.set(component)
+            // Get component
+            val component = widget.javaClass.getMethod("getComponent").invoke(widget) as JComponent
+            terminalComponent.set(component)
 
-        // Store sendText function
-        sendTextFn = { text, execute ->
-            try {
-                val starter = widget.javaClass.getMethod("getTerminalStarter").invoke(widget)
-                if (starter != null) {
-                    val sendStr = if (execute) text + "\n" else text
-                    starter.javaClass.getMethod("sendString", String::class.java, Boolean::class.javaPrimitiveType)
-                        .invoke(starter, sendStr, false)
+            // Store sendText function via ShellTerminalWidget
+            sendTextFn = { text, execute ->
+                try {
+                    if (execute) {
+                        widget.javaClass.getMethod("executeCommand", String::class.java)
+                            .invoke(widget, text)
+                    } else {
+                        val starter = widget.javaClass.getMethod("getTerminalStarter").invoke(widget)
+                        if (starter != null) {
+                            starter.javaClass.getMethod("sendString", String::class.java, Boolean::class.javaPrimitiveType)
+                                .invoke(starter, text, false)
+                        }
+                    }
+                } catch (e: Exception) {
+                    logger.warn("Failed to send text: ${e.message}")
                 }
-            } catch (e: Exception) {
-                logger.warn("Failed to send text: ${e.message}")
             }
-        }
 
-        val content = ContentFactory.getInstance().createContent(component, "Pi", true)
-        content.isCloseable = true
-        toolWindow.contentManager.addContent(content)
+            // Show and focus the Terminal tool window
+            focusTerminalWindow()
+
+            logger.info("Pi terminal tab created in Terminal window")
+        } catch (e: Exception) {
+            logger.error("Failed to create terminal tab", e)
+            throw e
+        }
+    }
+
+    private fun focusTerminalWindow() {
+        val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Terminal")
+        toolWindow?.show {
+            terminalComponent.get()?.requestFocusInWindow()
+        }
     }
 
     private fun startPiWithDelay() {
@@ -164,7 +119,6 @@ class PiTerminalService(private val project: Project) {
                 append(" --thinking ${settings.thinkingLevel}")
             }
 
-            // Disable themes to avoid unsupported escape sequences in embedded terminal
             append(" --no-themes")
 
             if (settings.extraArgs.isNotBlank()) {
@@ -175,7 +129,7 @@ class PiTerminalService(private val project: Project) {
 
         // Poll until terminal is ready, then send command
         var attempts = 0
-        val timer = object : Timer(200, null) {
+        val timer = object : Timer(300, null) {
             init {
                 isRepeats = true
                 addActionListener {
@@ -184,8 +138,8 @@ class PiTerminalService(private val project: Project) {
                     if (fn != null) {
                         fn(command, true)
                         stop()
-                    } else if (attempts > 25) {
-                        logger.warn("Terminal not ready after 5s")
+                    } else if (attempts > 20) {
+                        logger.warn("Terminal not ready after 6s")
                         stop()
                     }
                 }
@@ -212,20 +166,17 @@ class PiTerminalService(private val project: Project) {
      * Focus the terminal widget.
      */
     fun focus() {
-        terminalComponent.get()?.requestFocusInWindow()
+        focusTerminalWindow()
     }
 
-    fun isReady(): Boolean = terminalComponent.get() != null && isInitialized
+    fun isReady(): Boolean = isInitialized
 
     /**
-     * Reset state so terminal can be re-initialized after close.
+     * Reset state so terminal can be re-launched.
      */
     fun reset() {
-        try {
-            // The terminal process is killed when the disposable is disposed
-            terminalComponent.set(null)
-            sendTextFn = null
-        } catch (_: Exception) {}
+        terminalComponent.set(null)
+        sendTextFn = null
         isInitialized = false
         logger.info("Pi terminal reset")
     }

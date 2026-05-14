@@ -5,13 +5,10 @@ import com.piagent.launcher.services.PiTerminalService
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.wm.ToolWindowManager
 
 /**
  * Send selected code to Pi as a file reference.
  * Format: @relative/path/to/file.go#L10-25
- *
- * Pi will read the file and know exactly which lines to look at.
  */
 class SendSelectionAction : AnAction() {
 
@@ -47,21 +44,15 @@ class SendSelectionAction : AnAction() {
 
         // Build reference: @path/to/file.go#L10-25
         val reference = if (startLine == endLine) {
-            "@$relativePath#L$startLine"
+            "@$relativePath#L$startLine "
         } else {
-            "@$relativePath#L$startLine-$endLine"
+            "@$relativePath#L$startLine-$endLine "
         }
 
-        // Ensure Pi panel is visible and initialized
-        val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Pi Agent")
+        // Ensure Pi is launched
         val service = PiTerminalService.getInstance(project)
-
-        if (!service.isReady() && toolWindow != null) {
-            service.initTerminal(toolWindow)
-        }
-
-        if (toolWindow != null && !toolWindow.isVisible) {
-            toolWindow.show()
+        if (!service.isReady()) {
+            service.launch()
         }
 
         // Start diff watching
@@ -69,8 +60,7 @@ class SendSelectionAction : AnAction() {
         diffWatcher.snapshotFile(filePath)
         diffWatcher.startWatching()
 
-        // Build reference and put in terminal input (don't execute)
-        // User can continue typing their question after the reference
+        // Insert reference into terminal input (don't execute)
         service.insertText(reference)
         service.focus()
     }

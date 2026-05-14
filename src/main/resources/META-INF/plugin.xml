@@ -14,30 +14,30 @@
         <code>npm i -g @anthropic-ai/pi-coding-agent</code> or visit <a href="https://pi.dev">pi.dev</a>
     </blockquote>
 
-    <h3>✨ Features</h3>
+    <h3>Features</h3>
     <ul>
         <li><b>One-click launch</b> from the toolbar</li>
-        <li><b>Integrated terminal</b> that opens a dedicated "Pi" tab in the project root</li>
+        <li><b>Integrated terminal</b> that opens a dedicated "Pi" tab inside the Terminal tool window</li>
         <li><b>Send to Pi</b> — select code, right-click, and send file reference (<code>@path/file.go#L10-25</code>) to Pi's input</li>
         <li><b>Auto-open files</b> modified by Pi in the editor</li>
         <li><b>Completion notifications</b> after Pi finishes processing</li>
         <li><b>Flexible configuration</b> for models, thinking levels, and launch options</li>
     </ul>
 
-    <h3>🚀 Usage</h3>
+    <h3>Usage</h3>
     <h4>Quick Start</h4>
     <ol>
-        <li>Click the <b>π</b> button in the main toolbar.</li>
-        <li>The integrated terminal opens a new "Pi" tab and runs <code>pi</code> automatically.</li>
-        <li>Select code → Right-click → <b>Send to Pi</b> to add file context to your prompt.</li>
+        <li>Click the <b>pi</b> button in the main toolbar.</li>
+        <li>A new "Pi" tab opens in the Terminal window and runs <code>pi</code> automatically.</li>
+        <li>Select code, right-click, then <b>Send to Pi</b> to add file context to your prompt.</li>
     </ol>
 
     <h4>Configuration</h4>
-    <p>Open <b>Settings → Tools → Pi Agent</b> to pick the model, thinking level, notification behavior, and auto-open options.</p>
+    <p>Open <b>Settings, Tools, Pi Agent</b> to pick the model, thinking level, notification behavior, and auto-open options.</p>
 
-    <h3>⌨️ Keyboard Shortcuts</h3>
+    <h3>Keyboard Shortcuts</h3>
     <ul>
-        <li><code>Cmd+Esc</code> (Mac) / <code>Ctrl+Esc</code> (Win/Linux) — Toggle Pi panel</li>
+        <li><code>Cmd+Esc</code> (Mac) / <code>Ctrl+Esc</code> (Win/Linux) — Launch or focus Pi</li>
         <li><code>Cmd+Shift+P</code> (Mac) / <code>Ctrl+Shift+P</code> (Win/Linux) — Send selection to Pi</li>
     </ul>
 
@@ -46,11 +46,16 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>0.1.1</h3>
+    <ul>
+        <li>Pi now opens as a tab inside the Terminal tool window (alongside Local)</li>
+        <li>Removed standalone Pi Agent tool window</li>
+        <li>Reflection-based terminal API for zero deprecated warnings</li>
+    </ul>
     <h3>0.1.0</h3>
     <ul>
         <li>Initial release</li>
-        <li>One-click launch from toolbar (π icon)</li>
-        <li>Integrated terminal with Pi CLI</li>
+        <li>One-click launch from toolbar</li>
         <li>Send selection as file reference (@path#Lstart-end)</li>
         <li>Auto-open files modified by Pi</li>
         <li>Completion notifications</li>
@@ -63,13 +68,6 @@
     <depends>org.jetbrains.plugins.terminal</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="Pi Agent"
-                    secondary="true"
-                    anchor="bottom"
-                    canCloseContents="true"
-                    factoryClass="com.piagent.launcher.PiToolWindowFactory"
-                    icon="/icons/pi.svg"/>
-
         <projectService serviceImplementation="com.piagent.launcher.services.PiTerminalService"/>
         <projectService serviceImplementation="com.piagent.launcher.services.PiDiffWatcher"/>
         <projectService serviceImplementation="com.piagent.launcher.services.PiFileWatcher"/>
@@ -84,7 +82,7 @@
 
         <notificationGroup id="Pi Agent"
                            displayType="BALLOON"
-                           toolWindowId="Pi Agent"/>
+                           toolWindowId="Terminal"/>
     </extensions>
 
     <actions>
@@ -92,16 +90,16 @@
         <action id="Pi.Launch"
                 class="com.piagent.launcher.actions.LaunchPiAction"
                 text="Launch Pi"
-                description="Launch Pi agent in integrated terminal"
+                description="Launch Pi agent in Terminal"
                 icon="/icons/pi.svg">
             <add-to-group group-id="MainToolbarRight" anchor="last"/>
         </action>
 
-        <!-- Toggle Pi panel -->
+        <!-- Quick launch/focus -->
         <action id="Pi.OpenToolWindow"
                 class="com.piagent.launcher.actions.OpenPiAction"
                 text="Open Pi Agent"
-                description="Open or focus Pi agent terminal"
+                description="Launch or focus Pi agent terminal"
                 icon="/icons/pi.svg">
             <keyboard-shortcut keymap="$default" first-keystroke="meta ESCAPE"/>
         </action>
