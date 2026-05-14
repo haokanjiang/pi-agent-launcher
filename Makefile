@@ -38,6 +38,10 @@ run-ide: ## Launch a sandbox IDE with the plugin loaded
 	./gradlew runIde
 
 release: build ## Create GitHub release with jar and zip
+	@if gh release view v$(VERSION) >/dev/null 2>&1; then \
+		echo "\033[33m⚠ v$(VERSION) already released. Bump version in build.gradle.kts first.\033[0m"; \
+		exit 1; \
+	fi
 	@echo "Releasing v$(VERSION)..."
 	git tag -f v$(VERSION)
 	git push origin v$(VERSION) --force
