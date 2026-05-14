@@ -26,10 +26,15 @@ class PiTerminalService(private val project: Project) {
      * Launch Pi as a new tab in the IDE's Terminal tool window.
      */
     fun launch() {
-        if (isInitialized) {
+        if (isInitialized && isTerminalAlive()) {
             // Focus existing Pi tab
             focusTerminalWindow()
             return
+        }
+
+        // Reset if previous session was closed
+        if (isInitialized) {
+            reset()
         }
 
         try {
@@ -40,6 +45,14 @@ class PiTerminalService(private val project: Project) {
         } catch (e: Exception) {
             logger.error("Failed to launch Pi terminal", e)
         }
+    }
+
+    /**
+     * Check if the Pi terminal tab is still alive.
+     */
+    private fun isTerminalAlive(): Boolean {
+        val component = terminalComponent.get() ?: return false
+        return component.isShowing
     }
 
     /**
