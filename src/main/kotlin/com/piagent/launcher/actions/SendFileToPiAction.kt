@@ -49,8 +49,8 @@ class SendFileToPiAction : AnAction() {
     }
 
     override fun update(e: AnActionEvent) {
+        e.presentation.isVisible = true
         val files = getFiles(e)
-        e.presentation.isVisible = e.place == "ProjectViewPopupMenu" || e.place == "EditorTabPopupMenu" || files.isNotEmpty()
         e.presentation.isEnabled = files.any { !it.isDirectory }
     }
 
