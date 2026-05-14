@@ -61,7 +61,7 @@ bump-major: ## Bump major version (0.1.3 → 1.0.0)
 	sed -i '' "s/version = \"$$CURRENT\"/version = \"$$NEW\"/" build.gradle.kts; \
 	echo "\033[32m✓ Bumped $$CURRENT → $$NEW\033[0m"
 
-release: build ## Create GitHub release with jar and zip
+release: build ## Create GitHub release and publish to JetBrains Marketplace
 	@if gh release view v$(VERSION) >/dev/null 2>&1; then \
 		echo "\033[33m⚠ v$(VERSION) already released. Bump version in build.gradle.kts first.\033[0m"; \
 		exit 1; \
@@ -75,4 +75,7 @@ release: build ## Create GitHub release with jar and zip
 		--title "v$(VERSION)" \
 		--generate-notes
 	@echo ""
-	@echo "✓ Released: https://github.com/haokanjiang/pi-agent-launcher/releases/tag/v$(VERSION)"
+	@echo "✓ GitHub Release: https://github.com/haokanjiang/pi-agent-launcher/releases/tag/v$(VERSION)"
+	@echo "Publishing to JetBrains Marketplace..."
+	./gradlew publishPlugin
+	@echo "✓ Published to JetBrains Marketplace"
