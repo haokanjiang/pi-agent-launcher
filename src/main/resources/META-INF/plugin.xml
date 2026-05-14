@@ -106,7 +106,7 @@
                 text="Open Pi Agent"
                 description="Launch or focus Pi agent terminal"
                 icon="/icons/pi.svg">
-            <keyboard-shortcut keymap="$default" first-keystroke="meta ESCAPE"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift BACK_QUOTE"/>
         </action>
 
         <!-- Send selection from editor -->
@@ -115,7 +115,7 @@
                 text="Send to Pi"
                 description="Send selected code reference to Pi"
                 icon="/icons/pi.svg">
-            <keyboard-shortcut keymap="$default" first-keystroke="meta shift P"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift L"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="ConsoleEditorPopupMenu" anchor="last"/>
         </action>
