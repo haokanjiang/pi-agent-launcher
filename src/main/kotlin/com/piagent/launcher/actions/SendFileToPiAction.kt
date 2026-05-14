@@ -4,7 +4,9 @@ import com.piagent.launcher.services.PiTerminalService
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiFileSystemItem
 
 /**
  * Send file(s) from Project View to Pi.
@@ -48,17 +50,27 @@ class SendFileToPiAction : AnAction() {
 
     override fun update(e: AnActionEvent) {
         val files = getFiles(e)
-        e.presentation.isVisible = files.isNotEmpty()
-        e.presentation.isEnabled = files.isNotEmpty()
+        e.presentation.isVisible = e.place == "ProjectViewPopupMenu" || e.place == "EditorTabPopupMenu" || files.isNotEmpty()
+        e.presentation.isEnabled = files.any { !it.isDirectory }
     }
 
     private fun getFiles(e: AnActionEvent): List<VirtualFile> {
-        // Try array first (multi-select), then single file
+        // Try array first (multi-select)
         val array = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
         if (array != null && array.isNotEmpty()) return array.toList()
 
+        // Try single file
         val single = e.getData(CommonDataKeys.VIRTUAL_FILE)
         if (single != null) return listOf(single)
+
+        // Try PSI elements (Project View uses this)
+        val psiElements = e.getData(LangDataKeys.PSI_ELEMENT_ARRAY)
+        if (psiElements != null) {
+            val files = psiElements.mapNotNull { 
+                (it as? PsiFileSystemItem)?.virtualFile 
+            }
+            if (files.isNotEmpty()) return files
+        }
 
         // Try PSI file
         val psiFile = e.getData(CommonDataKeys.PSI_FILE)
