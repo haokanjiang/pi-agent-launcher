@@ -1,20 +1,17 @@
 package com.piagent.launcher.actions
 
-import com.piagent.launcher.services.PiFileWatcher
-import com.piagent.launcher.services.PiTerminalService
+import com.piagent.launcher.services.PiSessionService
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 
 /**
- * One-click launch Pi as a tab in the Terminal tool window.
+ * One-click launch: starts Pi and focuses its terminal tab.
  */
 class LaunchPiAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val service = PiTerminalService.getInstance(project)
-        service.launch()
-        PiFileWatcher.getInstance(project).startWatching()
+        PiSessionService.getInstance(project).launch()
     }
 
     override fun update(e: AnActionEvent) {

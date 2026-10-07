@@ -20,7 +20,7 @@
         <li><b>Integrated terminal</b> that opens a dedicated "Pi" tab inside the Terminal tool window</li>
         <li><b>Send to Pi</b> — select code, right-click, and send file reference (<code>@path/file.go#L10-25</code>) to Pi's input</li>
         <li><b>Auto-open files</b> modified by Pi in the editor</li>
-        <li><b>Completion notifications</b> after Pi finishes processing</li>
+        <li><b>Silent</b> — no diff tabs, no completion balloons, no exit reports</li>
         <li><b>Flexible configuration</b> for models, thinking levels, and launch options</li>
     </ul>
 
@@ -33,7 +33,7 @@
     </ol>
 
     <h4>Configuration</h4>
-    <p>Open <b>Settings, Tools, Pi Agent</b> to pick the model, thinking level, notification behavior, and auto-open options.</p>
+    <p>Open <b>Settings, Tools, Pi Agent</b> to pick the model, thinking level and launch options.</p>
 
     <h3>Keyboard Shortcuts</h3>
     <ul>
@@ -46,6 +46,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>0.1.5</h3>
+    <ul>
+        <li>Fixed IDE freezes: VFS changes are debounced, filtered and never touch the editor off the EDT</li>
+        <li>The plugin is now silent: no diff tabs, no completion balloons, no exit reports</li>
+        <li>Auto-open is off by default and only opens plain editor tabs</li>
+        <li>Show the state in the status bar instead of interrupting you</li>
+    </ul>
     <h3>0.1.1</h3>
     <ul>
         <li>Pi now opens as a tab inside the Terminal tool window (alongside Local)</li>
@@ -68,8 +75,7 @@
     <depends>org.jetbrains.plugins.terminal</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <projectService serviceImplementation="com.piagent.launcher.services.PiTerminalService"/>
-        <projectService serviceImplementation="com.piagent.launcher.services.PiDiffWatcher"/>
+        <projectService serviceImplementation="com.piagent.launcher.services.PiSessionService"/>
         <projectService serviceImplementation="com.piagent.launcher.services.PiFileWatcher"/>
 
         <applicationService serviceImplementation="com.piagent.launcher.settings.PiSettings"/>

@@ -1,0 +1,51 @@
+package com.piagent.launcher.services
+
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
+import com.piagent.launcher.infrastructure.IdePiNotifier
+import com.piagent.launcher.infrastructure.IdeTerminalProvider
+import com.piagent.launcher.settings.PiSettings
+import com.piagent.launcher.settings.toLaunchOptions
+
+/**
+ * Project-level entry point to the Pi session.
+ *
+ * IntelliJ only supports a `(Project)` (or `(Project, CoroutineScope)`)
+ * constructor for services, so this stays a thin adapter and the actual logic
+ * lives in [PiSession].
+ */
+@Service(Service.Level.PROJECT)
+class PiSessionService(private val project: Project) : Disposable {
+
+    private val session = PiSession(
+        workingDirectory = { project.basePath ?: System.getProperty("user.home") },
+        publishStatus = PiSessionState.publisherFor(project),
+        terminals = IdeTerminalProvider(project),
+        notifier = IdePiNotifier(project),
+        launchOptions = { PiSettings.getInstance().state.toLaunchOptions() }
+    )
+
+    val status: PiSessionStatus get() = session.status
+
+    fun isRunning(): Boolean = session.isRunning()
+
+    fun launch() = session.launch()
+
+    fun submitText(text: String) = session.submitText(text)
+
+    fun insertText(text: String) = session.insertText(text)
+
+    fun focus() = session.focus()
+
+    fun reset() = session.reset()
+
+    override fun dispose() = session.dispose()
+
+    companion object {
+        const val TAB_NAME = PiSession.TAB_NAME
+
+        fun getInstance(project: Project): PiSessionService = project.service()
+    }
+}

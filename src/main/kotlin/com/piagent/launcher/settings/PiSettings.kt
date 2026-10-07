@@ -5,9 +5,10 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.service
+import com.piagent.launcher.domain.PiLaunchOptions
 
 /**
- * Persistent settings for Pi Agent plugin.
+ * Persistent plugin settings (Settings → Tools → Pi Agent).
  */
 @Service(Service.Level.APP)
 @State(
@@ -17,12 +18,11 @@ import com.intellij.openapi.components.service
 class PiSettings : PersistentStateComponent<PiSettings.State> {
 
     data class State(
-        var piCommand: String = "pi",
-        var model: String = "Default",
+        var piCommand: String = PiLaunchOptions.DEFAULT_COMMAND,
+        var model: String = PiLaunchOptions.DEFAULT_VALUE,
         var customModelId: String = "",
-        var thinkingLevel: String = "Default",
-        var autoOpenFiles: Boolean = true,
-        var showNotifications: Boolean = true,
+        var thinkingLevel: String = PiLaunchOptions.DEFAULT_VALUE,
+        var autoOpenFiles: Boolean = false,
         var shellPath: String = "",
         var extraArgs: String = ""
     )
@@ -39,3 +39,24 @@ class PiSettings : PersistentStateComponent<PiSettings.State> {
         fun getInstance(): PiSettings = service()
     }
 }
+
+/**
+ * Translates persisted settings into the domain model used to build the CLI
+ * command. A custom model id wins over the drop-down, and "Default" means
+ * "let Pi decide".
+ */
+fun PiSettings.State.toLaunchOptions(): PiLaunchOptions = PiLaunchOptions(
+    command = piCommand.ifBlank { PiLaunchOptions.DEFAULT_COMMAND },
+    model = resolveModel(),
+    thinkingLevel = thinkingLevel.takeUnless { it.isDefaultValue() },
+    extraArgs = extraArgs
+)
+
+private fun PiSettings.State.resolveModel(): String? = when {
+    customModelId.isNotBlank() -> customModelId
+    !model.isDefaultValue() -> model
+    else -> null
+}
+
+private fun String.isDefaultValue(): Boolean =
+    isBlank() || this == PiLaunchOptions.DEFAULT_VALUE
